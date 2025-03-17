@@ -502,7 +502,7 @@ public class PurchaseProgressPluginPanel extends PluginPanel
     private void updateValue()
     {
         long progressValue = plugin.getValue();
-        if (progressValue == 0)
+        if (progressValue <= 0)
         {
             value.setText("Visit a bank to calculate value");
         }

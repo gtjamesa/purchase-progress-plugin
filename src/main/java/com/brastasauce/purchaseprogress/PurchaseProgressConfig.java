@@ -46,13 +46,12 @@ public interface PurchaseProgressConfig extends Config
 	@ConfigItem(
 		keyName = "bankTab",
 		name = "Bank Tab",
-		description = "The bank tab to include. Input 0 to use entire bank value.",
+		description = "The bank tab to include. Input 0 or clear to use entire bank value.",
 		position = 1
 	)
-	@Range(max = 9)
-	default int bankTab()
+	default String bankTab()
 	{
-		return 0;
+		return "0";
 	}
 
     @ConfigItem(

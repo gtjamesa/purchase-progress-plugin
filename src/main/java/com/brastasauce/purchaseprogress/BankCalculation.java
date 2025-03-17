@@ -92,7 +92,8 @@ public class BankCalculation
         }
 
         // Negate supply buffer
-        if (buffer > 0) {
+        if (buffer > 0)
+        {
             value -= buffer;
         }
 
@@ -108,23 +109,37 @@ public class BankCalculation
         // Add loot tab value if selected
         if (config.includeBankTab())
         {
-            value += calculateBankTab();
+            String[] selectedTabs = config.bankTab().split(",");
+            final Item[] items = bank.getItems();
+
+            for (String tab : selectedTabs)
+            {
+                Integer lootTab = parseLootTab(tab);
+                if (lootTab != null)
+                {
+                    value += calculateBankTab(lootTab, items);
+                }
+            }
         }
 
         // Add bank tag value if selected
-        if (config.includeBankTag())
+        final String bankTags = config.bankTag();
+        if (config.includeBankTag() && bankTags != null)
         {
-            value += calculateBankTag();
+            String[] selectedTabs = bankTags.split(",");
+
+            for (String tag : selectedTabs)
+            {
+                value += calculateBankTag(tag);
+            }
         }
 
         return value;
     }
 
-    private long calculateBankTab()
+    private long calculateBankTab(int lootTab, Item[] items)
     {
         long value = 0;
-        final Item[] items = bank.getItems();
-        int lootTab = config.bankTab();
         final String cacheKey = "tab:" + lootTab;
 
         if (lootTab != 0)
@@ -147,48 +162,36 @@ public class BankCalculation
         return value;
     }
 
-    private long calculateBankTag()
+    private long calculateBankTag(String tag)
     {
         long value = 0;
-        final String bankTags = config.bankTag();
+        final ItemContainer bankTab = client.getItemContainer(InventoryID.BANK);
 
-        if (bankTags == null)
+        if (bankTab == null)
         {
             return value;
         }
 
-        String[] selectedTabs = bankTags.split(",");
+        Item[] items = tagManager.getItemsForTag(tag.trim()).stream()
+            .map(itemId -> {
+                final int idx = bankTab.find(itemId);
+                return bankTab.getItem(idx);
+            })
+            .filter(Objects::nonNull)
+            .toArray(Item[]::new);
 
-        for (String tag : selectedTabs)
-        {
-            final ItemContainer bankTab = client.getItemContainer(InventoryID.BANK);
-
-            if (bankTab == null)
-            {
-                continue;
-            }
-
-            Item[] items = tagManager.getItemsForTag(tag.trim()).stream()
-                .map(itemId -> {
-                    final int idx = bankTab.find(itemId);
-                    return bankTab.getItem(idx);
-                })
-                .filter(Objects::nonNull)
-                .toArray(Item[]::new);
-
-            value += calculateItemValues(items, "tag:" + tag);
-        }
+        value += calculateItemValues(items, "tag:" + tag);
 
         return value;
     }
 
     private long calculateItemValues(Item[] items, String cacheKey)
     {
-        // Return last calculation if bank tab hasn't changed
         final Integer cachedHash = cacheHash.get(cacheKey);
         final Long cachedValue = cacheValue.get(cacheKey);
         final int newHash = hashItems(items);
 
+        // Return last calculation if bank tab hasn't changed
         if (cachedValue != null && cachedHash == newHash)
         {
             log.debug("Returning cached value ({}) for {}", cachedValue, cacheKey);
@@ -235,5 +238,19 @@ public class BankCalculation
         }
 
         return mapCheck.hashCode();
+    }
+
+    private Integer parseLootTab(String tab)
+    {
+        try
+        {
+            // null or 0 means entire bank
+            int lootTab = tab == null || tab.equals("0") ? 0 : Integer.parseInt(tab);
+            return lootTab >= 0 && lootTab <= 9 ? lootTab : null;
+        }
+        catch (NumberFormatException e)
+        {
+            return null;
+        }
     }
 }
