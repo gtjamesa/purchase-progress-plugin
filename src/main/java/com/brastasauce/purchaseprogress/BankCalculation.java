@@ -46,10 +46,8 @@ import net.runelite.client.plugins.banktags.TagManager;
 @Slf4j
 public class BankCalculation
 {
-    private int bankHash;
-    private int tagHash;
-    private Long bankValue;
-    private Long tagValue;
+    private final HashMap<String, Integer> cacheHash = new HashMap<>();
+    private final HashMap<String, Long> cacheValue = new HashMap<>();
     final HashSet<Integer> indexedItems = new HashSet<>();
     private ItemContainer bank;
 
@@ -121,6 +119,7 @@ public class BankCalculation
         long value = 0;
         final Item[] items = bank.getItems();
         int lootTab = config.bankTab();
+        final String cacheKey = "tab:" + lootTab;
 
         if (lootTab != 0)
         {
@@ -132,11 +131,11 @@ public class BankCalculation
             }
 
             int itemCount = client.getVarbitValue(TAB_VARBITS.get(lootTab - 1));
-            value += calculateItemValues(Arrays.copyOfRange(items, startIndex, startIndex + itemCount), true);
+            value += calculateItemValues(Arrays.copyOfRange(items, startIndex, startIndex + itemCount), cacheKey);
         }
         else
         {
-            value += calculateItemValues(items, true);
+            value += calculateItemValues(items, cacheKey);
         }
 
         return value;
@@ -171,22 +170,26 @@ public class BankCalculation
                 .filter(Objects::nonNull)
                 .toArray(Item[]::new);
 
-            value += calculateItemValues(items, false);
+            value += calculateItemValues(items, "tag:" + tag);
         }
 
         return value;
     }
 
-    private long calculateItemValues(Item[] items, boolean cached)
+    private long calculateItemValues(Item[] items, String cacheKey)
     {
         // Return last calculation if bank tab hasn't changed
+        final Integer cachedHash = cacheHash.get(cacheKey);
+        final Long cachedValue = cacheValue.get(cacheKey);
         final int newHash = hashItems(items);
-        if (cached && bankValue != null && bankHash == newHash)
+
+        if (cachedValue != null && cachedHash == newHash)
         {
-            return bankValue;
+            log.debug("Returning cached value ({}) for {}", cachedValue, cacheKey);
+            return cachedValue;
         }
 
-        bankHash = newHash;
+        cacheHash.put(cacheKey, newHash);
         long value = 0;
 
         for (final Item item : items)
@@ -213,7 +216,7 @@ public class BankCalculation
             indexedItems.add(id);
         }
 
-        bankValue = value;
+        cacheValue.put(cacheKey, value);
         return value;
     }
 
