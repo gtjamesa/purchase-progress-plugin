@@ -78,6 +78,7 @@ public class BankCalculation
     long calculateValue()
     {
         long value = 0;
+        long buffer = config.buffer();
         indexedItems.clear();
 
         final ItemContainer inventory = client.getItemContainer(InventoryID.INVENTORY);
@@ -88,6 +89,11 @@ public class BankCalculation
         {
             value += inventory.count(ItemID.COINS_995);
             value += inventory.count(ItemID.PLATINUM_TOKEN) * 1000L;
+        }
+
+        // Negate supply buffer
+        if (buffer > 0) {
+            value -= buffer;
         }
 
         if (bank == null)

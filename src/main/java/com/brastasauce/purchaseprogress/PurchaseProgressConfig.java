@@ -87,4 +87,15 @@ public interface PurchaseProgressConfig extends Config
 	{
 		return false;
 	}
+
+    @ConfigItem(
+        keyName = "buffer",
+        name = "Buffer",
+        description = "A fixed amount to exclude from the total value (ie supplies). Input 0 to not include a buffer.",
+        position = 5
+    )
+    default int buffer()
+    {
+        return 0;
+    }
 }
