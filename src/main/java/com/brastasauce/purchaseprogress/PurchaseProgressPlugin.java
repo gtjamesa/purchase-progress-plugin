@@ -45,6 +45,7 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.RuneLiteConfig;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -369,6 +370,13 @@ public class PurchaseProgressPlugin extends Plugin
 		return items.contains(newItem);
 	}
 
+	private void calculateValue()
+	{
+		value = bankCalculation.calculateValue();
+		dataManager.saveData();
+		SwingUtilities.invokeLater(() -> panel.updateProgressPanels());
+	}
+
 	@Override
 	protected void startUp() throws Exception
 	{
@@ -407,9 +415,16 @@ public class PurchaseProgressPlugin extends Plugin
 	{
 		if (event.getScriptId() == ScriptID.BANKMAIN_BUILD)
 		{
-			value = bankCalculation.calculateValue();
-			dataManager.saveData();
-			SwingUtilities.invokeLater(() -> panel.updateProgressPanels());
+			calculateValue();
+		}
+	}
+
+	@Subscribe
+	public void onConfigChanged(ConfigChanged event)
+	{
+		if (event.getGroup().equals(CONFIG_GROUP))
+		{
+			clientThread.invokeLater(this::calculateValue);
 		}
 	}
 }

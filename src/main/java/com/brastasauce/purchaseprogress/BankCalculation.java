@@ -25,6 +25,9 @@
 package com.brastasauce.purchaseprogress;
 
 import com.google.common.collect.ImmutableList;
+import java.util.HashSet;
+import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.InventoryID;
 import net.runelite.api.Item;
@@ -38,11 +41,17 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import net.runelite.client.plugins.banktags.TagManager;
 
+@Slf4j
 public class BankCalculation
 {
-    private int hash;
+    private int bankHash;
+    private int tagHash;
     private Long bankValue;
+    private Long tagValue;
+    final HashSet<Integer> indexedItems = new HashSet<>();
+    private ItemContainer bank;
 
     private static final List<Integer> TAB_VARBITS = ImmutableList.of(
             Varbits.BANK_TAB_ONE_COUNT,
@@ -60,6 +69,9 @@ public class BankCalculation
     private ItemManager itemManager;
 
     @Inject
+    private TagManager tagManager;
+
+    @Inject
     private Client client;
 
     @Inject
@@ -68,9 +80,10 @@ public class BankCalculation
     long calculateValue()
     {
         long value = 0;
+        indexedItems.clear();
 
         final ItemContainer inventory = client.getItemContainer(InventoryID.INVENTORY);
-        final ItemContainer bank = client.getItemContainer(InventoryID.BANK);
+        bank = client.getItemContainer(InventoryID.BANK);
 
         // Add inventory GP/tokens
         if (inventory != null)
@@ -89,11 +102,23 @@ public class BankCalculation
         value += bank.count(ItemID.PLATINUM_TOKEN) * 1000L;
 
         // Add loot tab value if selected
-        if (!config.includeBankTab())
+        if (config.includeBankTab())
         {
-            return value;
+            value += calculateBankTab();
         }
 
+        // Add bank tag value if selected
+        if (config.includeBankTag())
+        {
+            value += calculateBankTag();
+        }
+
+        return value;
+    }
+
+    private long calculateBankTab()
+    {
+        long value = 0;
         final Item[] items = bank.getItems();
         int lootTab = config.bankTab();
 
@@ -107,26 +132,61 @@ public class BankCalculation
             }
 
             int itemCount = client.getVarbitValue(TAB_VARBITS.get(lootTab - 1));
-            value += calculateItemValues(Arrays.copyOfRange(items, startIndex, startIndex + itemCount));
+            value += calculateItemValues(Arrays.copyOfRange(items, startIndex, startIndex + itemCount), true);
         }
         else
         {
-            value += calculateItemValues(items);
+            value += calculateItemValues(items, true);
         }
 
         return value;
     }
 
-    private long calculateItemValues(Item[] items)
+    private long calculateBankTag()
+    {
+        long value = 0;
+        final String bankTags = config.bankTag();
+
+        if (bankTags == null)
+        {
+            return value;
+        }
+
+        String[] selectedTabs = bankTags.split(",");
+
+        for (String tag : selectedTabs)
+        {
+            final ItemContainer bankTab = client.getItemContainer(InventoryID.BANK);
+
+            if (bankTab == null)
+            {
+                continue;
+            }
+
+            Item[] items = tagManager.getItemsForTag(tag.trim()).stream()
+                .map(itemId -> {
+                    final int idx = bankTab.find(itemId);
+                    return bankTab.getItem(idx);
+                })
+                .filter(Objects::nonNull)
+                .toArray(Item[]::new);
+
+            value += calculateItemValues(items, false);
+        }
+
+        return value;
+    }
+
+    private long calculateItemValues(Item[] items, boolean cached)
     {
         // Return last calculation if bank tab hasn't changed
         final int newHash = hashItems(items);
-        if (bankValue != null && hash == newHash)
+        if (cached && bankValue != null && bankHash == newHash)
         {
             return bankValue;
         }
 
-        hash = newHash;
+        bankHash = newHash;
         long value = 0;
 
         for (final Item item : items)
@@ -134,7 +194,7 @@ public class BankCalculation
             final int qty = item.getQuantity();
             final int id = item.getId();
 
-            if (id <= 0 || qty == 0)
+            if (id <= 0 || qty == 0 || indexedItems.contains(id))
             {
                 continue;
             }
@@ -142,13 +202,15 @@ public class BankCalculation
             switch (id)
             {
                 case ItemID.COINS_995:
-                    break; // Inventory and Bank coins already calculated
                 case ItemID.PLATINUM_TOKEN:
                     break; // Inventory and Bank tokens already calculated
                 default:
                     value += (long) itemManager.getItemPrice(id) * qty;
                     break;
             }
+
+            // Index the item so it isn't counted twice if included in both tab/tags
+            indexedItems.add(id);
         }
 
         bankValue = value;

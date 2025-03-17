@@ -55,12 +55,34 @@ public interface PurchaseProgressConfig extends Config
 		return 0;
 	}
 
-	@ConfigItem(
-			keyName = "onlyTrackFirstItem",
-			name = "Only Track First Item",
-			description = "Only displays progress for the first listed item.",
-			position = 2
-	)
+    @ConfigItem(
+        keyName = "includeBankTag",
+        name = "Include Bank Tag",
+        description = "Include a bank tag's value in addition to gold.",
+        position = 2
+    )
+    default boolean includeBankTag()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "bankTag",
+        name = "Bank Tag",
+        description = "The bank tags to include. Multiple tags can be separated by commas.",
+        position = 3
+    )
+    default String bankTag()
+    {
+        return null;
+    }
+
+    @ConfigItem(
+        keyName = "onlyTrackFirstItem",
+        name = "Only Track First Item",
+        description = "Only displays progress for the first listed item.",
+        position = 4
+    )
 	default boolean onlyTrackFirstItem()
 	{
 		return false;
