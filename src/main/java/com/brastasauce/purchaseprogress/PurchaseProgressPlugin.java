@@ -39,8 +39,10 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.GameState;
 import net.runelite.api.ScriptID;
 import net.runelite.api.events.ScriptPostFired;
+import net.runelite.api.widgets.ComponentID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.RuneLiteConfig;
@@ -424,7 +426,10 @@ public class PurchaseProgressPlugin extends Plugin
 	{
 		if (event.getGroup().equals(CONFIG_GROUP))
 		{
-			clientThread.invokeLater(this::calculateValue);
+            if (client.getGameState() == GameState.LOGGED_IN && client.getWidget(ComponentID.BANK_CONTAINER) != null)
+            {
+                clientThread.invokeLater(this::calculateValue);
+            }
 		}
 	}
 }
