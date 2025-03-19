@@ -46,6 +46,8 @@ import net.runelite.client.plugins.banktags.TagManager;
 @Slf4j
 public class BankCalculation
 {
+    private static final int BANK_MAX_TABS = 9;
+
     private final HashMap<String, Integer> cacheHash = new HashMap<>();
     private final HashMap<String, Long> cacheValue = new HashMap<>();
     final HashSet<Integer> indexedItems = new HashSet<>();
@@ -226,6 +228,7 @@ public class BankCalculation
         }
 
         cacheValue.put(cacheKey, value);
+        log.debug("Calculated {} value for {}", cachedValue, cacheKey);
         return value;
     }
 
@@ -246,7 +249,7 @@ public class BankCalculation
         {
             // null or 0 means entire bank
             int lootTab = tab == null || tab.equals("0") ? 0 : Integer.parseInt(tab);
-            return lootTab >= 0 && lootTab <= 9 ? lootTab : null;
+            return lootTab >= 0 && lootTab <= BANK_MAX_TABS ? lootTab : null;
         }
         catch (NumberFormatException e)
         {
