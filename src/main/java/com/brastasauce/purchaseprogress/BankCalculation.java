@@ -93,12 +93,6 @@ public class BankCalculation
             value += inventory.count(ItemID.PLATINUM_TOKEN) * 1000L;
         }
 
-        // Negate supply buffer
-        if (buffer > 0)
-        {
-            value -= buffer;
-        }
-
         if (bank == null)
         {
             return value;
@@ -107,6 +101,12 @@ public class BankCalculation
         // Add bank GP/tokens
         value += bank.count(ItemID.COINS_995);
         value += bank.count(ItemID.PLATINUM_TOKEN) * 1000L;
+
+        // Negate supply buffer
+        if (buffer > 0)
+        {
+            value -= buffer;
+        }
 
         // Add loot tab value if selected
         if (config.includeBankTab())
